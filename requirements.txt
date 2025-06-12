@@ -1,0 +1,11 @@
+slycot
+control
+cvxpy
+frozendict
+joblib
+matplotlib
+numpy
+scipy
+seaborn
+tqdm
+typing_extensions
