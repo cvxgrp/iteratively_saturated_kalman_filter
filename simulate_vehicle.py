@@ -25,21 +25,21 @@ from iskf.metrics import METRIC_REGISTRY
 # Import experimental filter implementations
 from iskf.filters.kalman_filter import KalmanFilter
 from iskf.filters.huber_kalman_filter import HuberKalmanFilter
-from iskf.filters.circular_huber_kalman_filter import (
-    CircularHuberKalmanFilter,
+from iskf.filters.iskf import (
+    IterSatKalmanFilter,
 )
 from iskf.filters.steady_kalman_filter import SteadyKalmanFilter
 from iskf.filters.steady_huber_kalman_filter import SteadyHuberKalmanFilter
-from iskf.filters.steady_circular_huber_kalman_filter import (
-    SteadyCircularHuberKalmanFilter,
+from iskf.filters.steady_iskf import (
+    SteadyIterSatKalmanFilter,
 )
 from iskf.filters.steady_regularized_kalman_filter import (
     SteadyRegularizedKalmanFilter,
 )
 from iskf.filters.weighted_likelihood_filter import WeightedLikelihoodFilter
-from iskf.filters.steady_one_step_huber_filter import SteadyOneStepHuberFilter
-from iskf.filters.steady_two_step_huber_filter import SteadyTwoStepHuberFilter
-from iskf.filters.steady_three_term_huber import SteadyThreeTermHuberFilter
+from iskf.filters.steady_one_step_iskf import SteadyOneStepIterSatFilter
+from iskf.filters.steady_two_step_iskf import SteadyTwoStepIterSatFilter
+from iskf.filters.steady_three_term_iskf import SteadyThreeStepIterSatFilter
 
 
 def plot_vehicle_simulation_data(
@@ -382,9 +382,9 @@ def run_vehicle_simulation_and_save(
         filter_instance = HuberKalmanFilter(
             **common_filter_args, **parsed_filter_kwargs
         )
-    elif filter_type == "circular_huber":
-        filter_display_name = "Circular Huber Kalman Filter"
-        filter_instance = CircularHuberKalmanFilter(
+    elif filter_type == "iskf":
+        filter_display_name = "Iteratively Saturated Kalman Filter"
+        filter_instance = IterSatKalmanFilter(
             **common_filter_args, **parsed_filter_kwargs
         )
     elif filter_type == "steady_kalman":
@@ -397,9 +397,9 @@ def run_vehicle_simulation_and_save(
         filter_instance = SteadyHuberKalmanFilter(
             **common_filter_args, **parsed_filter_kwargs
         )
-    elif filter_type == "steady_circular_huber":
-        filter_display_name = "Steady-State Circular Huber Kalman Filter"
-        filter_instance = SteadyCircularHuberKalmanFilter(
+    elif filter_type == "steady_iskf":
+        filter_display_name = "Steady-State Iteratively Saturated Kalman Filter"
+        filter_instance = SteadyIterSatKalmanFilter(
             **common_filter_args, **parsed_filter_kwargs
         )
     elif filter_type == "steady_regularized":
@@ -414,25 +414,25 @@ def run_vehicle_simulation_and_save(
         )
     elif filter_type == "steady_one_step_huber":
         filter_display_name = "Steady One-Step Huber Filter"
-        filter_instance = SteadyOneStepHuberFilter(
+        filter_instance = SteadyOneStepIterSatFilter(
             **common_filter_args, **parsed_filter_kwargs
         )
     elif filter_type == "steady_two_step_huber":
         filter_display_name = "Steady Two-Step Huber Filter"
-        filter_instance = SteadyTwoStepHuberFilter(
+        filter_instance = SteadyTwoStepIterSatFilter(
             **common_filter_args, **parsed_filter_kwargs
         )
     elif filter_type == "steady_three_term_huber":
         filter_display_name = "Steady Three-Term Huber Filter"
-        filter_instance = SteadyThreeTermHuberFilter(
+        filter_instance = SteadyThreeStepIterSatFilter(
             **common_filter_args, **parsed_filter_kwargs
         )
     else:
         # This case should ideally be caught by argparse choices
         raise ValueError(
             f"Unknown filter_type: {filter_type}. "
-            "Choose from 'kalman', 'huber', 'circular_huber', "
-            "'steady_kalman', 'steady_huber', 'steady_circular_huber', "
+            "Choose from 'kalman', 'huber', 'iskf', "
+            "'steady_kalman', 'steady_huber', 'steady_iskf', "
             "'steady_regularized', 'wolf', 'steady_simple_huber', 'steady_two_step_huber', 'steady_three_term_huber'."
         )
 
@@ -636,10 +636,10 @@ if __name__ == "__main__":
         choices=[
             "kalman",
             "huber",
-            "circular_huber",
+            "iskf",
             "steady_kalman",
             "steady_huber",
-            "steady_circular_huber",
+            "steady_iskf",
             "steady_regularized",
             "wolf",
             "steady_one_step_huber",
@@ -651,8 +651,8 @@ if __name__ == "__main__":
             "Type of filter to run (optional):\n"
             "If not specified, only the raw simulation is run and saved.\n"
             "If specified, the filter is also run and its performance is evaluated."
-            " Choices: 'kalman', 'huber', 'circular_huber', 'steady_kalman', "
-            "'steady_huber', 'steady_circular_huber', 'steady_regularized', 'wolf', "
+            " Choices: 'kalman', 'huber', 'iskf', 'steady_kalman', "
+            "'steady_huber', 'steady_iskf', 'steady_regularized', 'wolf', "
             "'steady_simple_huber', 'steady_two_step_huber', 'steady_three_term_huber'."
         ),
     )

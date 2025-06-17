@@ -29,14 +29,14 @@ The `iskf.filters` module provides various robust Kalman filter implementations:
 
 - **`HuberKalmanFilter`**: Huber-based robust Kalman filter
 - **`SteadyHuberKalmanFilter`**: Steady-state Huber Kalman filter
-- **`CircularHuberKalmanFilter`**: Iterative Huber filter with circular updates
-- **`SteadyCircularHuberKalmanFilter`**: Steady-state version of circular Huber filter
+- **`IterSatKalmanFilter`**: Iteratively saturated Kalman filter
+- **`SteadyIterSatKalmanFilter`**: Steady-state version of ISKF
 
 ### Iteratively Saturated Kalman Filters (ISKF)
 
-- **`SteadyOneStepHuberFilter`**: Single-step iterative filter
-- **`SteadyTwoStepHuberFilter`**: Two-step iterative filter (ISKF with $\tilde k=2$)
-- **`SteadyThreeTermHuberFilter`**: Three-term Huber filter
+- **`SteadyOneStepIterSatFilter`**: Single-step iterative filter
+- **`SteadyTwoStepIterSatFilter`**: Two-step iterative filter (ISKF with $\tilde k=2$)
+- **`SteadyThreeStepIterSatFilter`**: Three-term Huber filter
 
 ### Other Robust Filters
 
@@ -48,14 +48,14 @@ The `iskf.filters` module provides various robust Kalman filter implementations:
 All filters inherit from `BaseFilter` and share a common interface:
 
 ```python
-from iskf.filters import SteadyTwoStepHuberFilter
+from iskf.filters import SteadyTwoStepIterSatFilter
 from iskf.models.vehicle import vehicle_ss
 
 # Create system model
 system_model = vehicle_ss(gamma=0.05, dt=0.05)
 
 # Initialize filter
-filter_instance = SteadyTwoStepHuberFilter(
+filter_instance = SteadyTwoStepIterSatFilter(
     system_model=system_model,
     cov_input=process_noise_cov,
     cov_measurement=measurement_noise_cov,
@@ -136,7 +136,7 @@ Simulates a cascaded CSTR model with 3 reactors.
 python simulate_cstr.py --random_seed 0 --outlier_percent 15 --num_simulation_steps 1000
 
 # With filter
-python simulate_cstr.py --outlier_percent 10 --filter_type steady_circular_huber
+python simulate_cstr.py --outlier_percent 10 --filter_type steady_iskf
 ```
 
 **Output:** Saves data to `results/simulation_data/cstr_n{n_reactors}_p{outlier_percent}_sp{scale_proc}_sm{scale_meas}_steps{steps}_seed{seed}.pkl`
@@ -210,7 +210,7 @@ Visualizes filter performance on CSTR data.
 ```bash
 # Plot CSTR results
 python plot_cstr_results.py --tune_filter_results \
-    results/parameter_search_data/steady_circular_huber_cstr_n3_p10_sp10_sm10_steps1000_seed0_optimistic_rmse_results.pkl
+    results/parameter_search_data/steady_iskf_cstr_n3_p10_sp10_sm10_steps1000_seed0_optimistic_rmse_results.pkl
 ```
 
 **Features:**
@@ -226,7 +226,7 @@ python plot_cstr_results.py --tune_filter_results \
 ```python
 import numpy as np
 from iskf.models.vehicle import vehicle_ss
-from iskf.filters import SteadyTwoStepHuberFilter
+from iskf.filters import SteadyTwoStepIterSatFilter
 from iskf.simulator import Simulator
 
 # 1. Create system model
@@ -249,7 +249,7 @@ T_out, Y_meas, X_true, _ = sim.simulate(
 )
 
 # 4. Create and run filter
-filter_instance = SteadyTwoStepHuberFilter(
+filter_instance = SteadyTwoStepIterSatFilter(
     system_model=model,
     cov_input=np.eye(2) * 10,
     cov_measurement=np.eye(2) * 5,

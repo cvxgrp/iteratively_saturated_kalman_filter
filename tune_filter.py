@@ -32,20 +32,20 @@ from iskf.metrics import METRIC_REGISTRY
 
 # Filter classes
 from iskf.filters.huber_kalman_filter import HuberKalmanFilter
-from iskf.filters.circular_huber_kalman_filter import (
-    CircularHuberKalmanFilter,
+from iskf.filters.iskf import (
+    IterSatKalmanFilter,
 )
 from iskf.filters.steady_huber_kalman_filter import SteadyHuberKalmanFilter
-from iskf.filters.steady_circular_huber_kalman_filter import (
-    SteadyCircularHuberKalmanFilter,
+from iskf.filters.steady_iskf import (
+    SteadyIterSatKalmanFilter,
 )
 from iskf.filters.steady_regularized_kalman_filter import (
     SteadyRegularizedKalmanFilter,
 )
 from iskf.filters.weighted_likelihood_filter import WeightedLikelihoodFilter
-from iskf.filters.steady_one_step_huber_filter import SteadyOneStepHuberFilter
-from iskf.filters.steady_two_step_huber_filter import SteadyTwoStepHuberFilter
-from iskf.filters.steady_three_term_huber import SteadyThreeTermHuberFilter
+from iskf.filters.steady_one_step_iskf import SteadyOneStepIterSatFilter
+from iskf.filters.steady_two_step_iskf import SteadyTwoStepIterSatFilter
+from iskf.filters.steady_three_term_iskf import SteadyThreeStepIterSatFilter
 from iskf.filters.kalman_filter import KalmanFilter
 from iskf.filters.steady_kalman_filter import SteadyKalmanFilter
 
@@ -86,9 +86,9 @@ PARAMETER_SEARCH_PLOTS = "figures"
 EVALUATION_RESULTS_DIR = os.path.join("results", "evaluations")
 SUPPORTED_FILTER_TYPES = [
     "huber",
-    "circular_huber",
+    "iskf",
     "steady_huber",
-    "steady_circular_huber",
+    "steady_iskf",
     "steady_regularized",
     "wolf",
     "steady_one_step_huber",
@@ -99,7 +99,7 @@ SUPPORTED_FILTER_TYPES = [
 # --- Filter Tuning Helper Functions ---
 
 
-def _tune_circular_huber(
+def _tune_iskf(
     system_model_obj,
     cov_input,
     cov_measurement,
@@ -122,17 +122,17 @@ def _tune_circular_huber(
     param_grid = [
         {"coef_s": cs, "coef_o": co} for cs in coef_s_sweep for co in coef_o_sweep
     ]
-    initial_filter = CircularHuberKalmanFilter(
+    initial_filter = IterSatKalmanFilter(
         system_model=system_model_obj,
         cov_input=cov_input,
         cov_measurement=cov_measurement,
     )
-    base_filename = f"circular_huber_{sim_data_filename}"
+    base_filename = f"iskf_{sim_data_filename}"
     opt_suffix = "_optimistic" if optimistic else "_realistic"
     metric_suffix = f"_{metric}"
 
     print(
-        f"\n  Step 3: Running grid search for CircularHuberKalmanFilter... (Optimistic mode: {optimistic}, Metric: {metric.upper()})"
+        f"\n  Step 3: Running grid search for IterSatKalmanFilter... (Optimistic mode: {optimistic}, Metric: {metric.upper()})"
     )
     best_params, best_score, all_results = grid_search_filter_hyperparams(
         initial_filter,
@@ -146,7 +146,7 @@ def _tune_circular_huber(
         n_jobs,
     )
     print(
-        f"\n--- CircularHuberKalmanFilter Grid Search Results (Optimistic: {optimistic}, Metric: {metric.upper()}) ---"
+        f"\n--- IterSatKalmanFilter Grid Search Results (Optimistic: {optimistic}, Metric: {metric.upper()}) ---"
     )
     print(f"Best Hyperparameters ({metric.upper()}): {best_params}")
     if "coef_s" in best_params:
@@ -160,7 +160,7 @@ def _tune_circular_huber(
         "grid_search_results": all_results,
         "best_params": best_params,
         "best_score": best_score,
-        "filter_type": "circular_huber",
+        "filter_type": "iskf",
         "sim_data_path": os.path.abspath(sim_data_path),
         "metric": metric,
         "optimistic": optimistic,
@@ -175,11 +175,9 @@ def _tune_circular_huber(
     )
     with open(results_filename, "wb") as f:
         pickle.dump(extended_results, f)
-    print(
-        f"All CircularHuberKalmanFilter grid search results saved to {results_filename}"
-    )
+    print(f"All IterSatKalmanFilter grid search results saved to {results_filename}")
 
-    print(f"\n  Step 4: Generating contour plot for CircularHuberKalmanFilter...")
+    print(f"\n  Step 4: Generating contour plot for IterSatKalmanFilter...")
     plot_save_path = os.path.join(
         PARAMETER_SEARCH_PLOTS,
         f"{base_filename}{opt_suffix}{metric_suffix}_contour_plot.pdf",
@@ -198,7 +196,7 @@ def _tune_circular_huber(
         save_path=plot_save_path,
         **plot_args,
     )
-    print(f"CircularHuberKalmanFilter contour plot saved to {plot_save_path}")
+    print(f"IterSatKalmanFilter contour plot saved to {plot_save_path}")
     return best_params, initial_filter, best_score
 
 
@@ -703,7 +701,7 @@ def _tune_steady_huber(
     return best_params, initial_filter, best_score
 
 
-def _tune_steady_circular_huber(
+def _tune_steady_iskf(
     system_model_obj,
     cov_input,
     cov_measurement,
@@ -721,9 +719,7 @@ def _tune_steady_circular_huber(
     sim_data_filename,
     sim_data_path,
 ):
-    print(
-        f"\n  Step 2: Setting up SteadyCircularHuberKalmanFilter grid search parameters..."
-    )
+    print(f"\n  Step 2: Setting up SteadyIterSatKalmanFilter grid search parameters...")
     opt_suffix = "_optimistic" if optimistic else "_realistic"
     metric_suffix = f"_{metric}"
 
@@ -746,14 +742,14 @@ def _tune_steady_circular_huber(
     print(f"    Generated param_grid with {len(param_grid)} parameter combinations")
 
     # Create initial filter with default values
-    initial_filter = SteadyCircularHuberKalmanFilter(
+    initial_filter = SteadyIterSatKalmanFilter(
         system_model=system_model_obj,
         cov_input=cov_input,
         cov_measurement=cov_measurement,
     )
 
     print(
-        f"\n  Step 3: Running grid search for SteadyCircularHuberKalmanFilter... (Optimistic mode: {optimistic}, Metric: {metric.upper()})"
+        f"\n  Step 3: Running grid search for SteadyIterSatKalmanFilter... (Optimistic mode: {optimistic}, Metric: {metric.upper()})"
     )
     best_params, best_score, all_results = grid_search_filter_hyperparams(
         initial_filter,
@@ -767,7 +763,7 @@ def _tune_steady_circular_huber(
         n_jobs,
     )
     print(
-        f"\n--- SteadyCircularHuberKalmanFilter Grid Search Results (Optimistic: {optimistic}, Metric: {metric.upper()}) ---"
+        f"\n--- SteadyIterSatKalmanFilter Grid Search Results (Optimistic: {optimistic}, Metric: {metric.upper()}) ---"
     )
     print(f"Best Hyperparameters ({metric.upper()}): {best_params}")
     for param_name, param_value in best_params.items():
@@ -779,7 +775,7 @@ def _tune_steady_circular_huber(
         "grid_search_results": all_results,
         "best_params": best_params,
         "best_score": best_score,
-        "filter_type": "steady_circular_huber",
+        "filter_type": "steady_iskf",
         "sim_data_path": sim_data_path,
         "metric": metric,
         "optimistic": optimistic,
@@ -789,21 +785,21 @@ def _tune_steady_circular_huber(
     # Save the results
     results_filename = os.path.join(
         PARAMETER_SEARCH_DIR,
-        f"steady_circular_huber_{sim_data_filename}{opt_suffix}{metric_suffix}_grid_search_results.pkl",
+        f"steady_iskf_{sim_data_filename}{opt_suffix}{metric_suffix}_grid_search_results.pkl",
     )
     with open(results_filename, "wb") as f:
         pickle.dump(extended_results, f)
     print(
-        f"All SteadyCircularHuberKalmanFilter grid search results saved to {results_filename}"
+        f"All SteadyIterSatKalmanFilter grid search results saved to {results_filename}"
     )
 
     # Also save the consolidated results
     consolidated_filename = os.path.join(
         PARAMETER_SEARCH_DIR,
-        f"steady_circular_huber_{sim_data_filename}{opt_suffix}{metric_suffix}_results.pkl",
+        f"steady_iskf_{sim_data_filename}{opt_suffix}{metric_suffix}_results.pkl",
     )
     consolidated_results = {
-        "filter_type": "steady_circular_huber",
+        "filter_type": "steady_iskf",
         "best_params": best_params,
         "best_score": best_score,
         "sim_data_path": os.path.abspath(sim_data_path),
@@ -815,7 +811,7 @@ def _tune_steady_circular_huber(
     with open(consolidated_filename, "wb") as f:
         pickle.dump(consolidated_results, f)
     print(
-        f"Consolidated SteadyCircularHuberKalmanFilter results saved to {consolidated_filename}"
+        f"Consolidated SteadyIterSatKalmanFilter results saved to {consolidated_filename}"
     )
 
     # Create filtered views of results by parameter configurations
@@ -847,7 +843,7 @@ def _tune_steady_circular_huber(
     if inf_iters_results:
         plot_save_path = os.path.join(
             PARAMETER_SEARCH_PLOTS,
-            f"steady_circular_huber_inf_iters_{sim_data_filename}{opt_suffix}{metric_suffix}_contour_plot.pdf",
+            f"steady_iskf_inf_iters_{sim_data_filename}{opt_suffix}{metric_suffix}_contour_plot.pdf",
         )
         plot_args = {
             "x_param_name": "coef_s",
@@ -864,14 +860,14 @@ def _tune_steady_circular_huber(
             **plot_args,
         )
         print(
-            f"SteadyCircularHuberKalmanFilter contour plot for infinite iterations saved to {plot_save_path}"
+            f"SteadyIterSatKalmanFilter contour plot for infinite iterations saved to {plot_save_path}"
         )
 
     # Plot contours for each step_size for visualization
     for step_size, results in step_size_filtered_results.items():
         plot_save_path = os.path.join(
             PARAMETER_SEARCH_PLOTS,
-            f"steady_circular_huber_step{step_size}_{sim_data_filename}{opt_suffix}{metric_suffix}_contour_plot.pdf",
+            f"steady_iskf_step{step_size}_{sim_data_filename}{opt_suffix}{metric_suffix}_contour_plot.pdf",
         )
         plot_args = {
             "x_param_name": "coef_s",
@@ -888,7 +884,7 @@ def _tune_steady_circular_huber(
             **plot_args,
         )
         print(
-            f"SteadyCircularHuberKalmanFilter contour plot for step_size={step_size} saved to {plot_save_path}"
+            f"SteadyIterSatKalmanFilter contour plot for step_size={step_size} saved to {plot_save_path}"
         )
 
     return best_params, initial_filter, best_score
@@ -1047,7 +1043,7 @@ def _plot_steady_one_step_huber_results_lines(
     y_axis_label: str = None,
     title: str = None,
 ):
-    """Plots metric vs. coef for different SteadyOneStepHuberFilter configurations (e.g., different series labels)."""
+    """Plots metric vs. coef for different SteadyOneStepIterSatFilter configurations (e.g., different series labels)."""
     sns.set_style("whitegrid")
     plt.figure(figsize=(10, 7))
     if y_axis_label is None:
@@ -1149,8 +1145,10 @@ def _tune_steady_one_step_huber(
     sim_data_filename,
     sim_data_path,
 ):
-    """Tunes SteadyOneStepHuberFilter with a one-dimensional grid search over 'coef'."""
-    print(f"\n  Step 2: Setting up SteadyOneStepHuberFilter grid search parameters...")
+    """Tunes SteadyOneStepIterSatFilter with a one-dimensional grid search over 'coef'."""
+    print(
+        f"\n  Step 2: Setting up SteadyOneStepIterSatFilter grid search parameters..."
+    )
 
     # One-step Huber like WoLF needs a specialized range.
     coef_min = 1e-1
@@ -1173,7 +1171,7 @@ def _tune_steady_one_step_huber(
     print(f"    Generated param_grid with {len(param_grid)} parameter combinations")
 
     # Create initial filter with default values
-    initial_filter = SteadyOneStepHuberFilter(
+    initial_filter = SteadyOneStepIterSatFilter(
         system_model=system_model_obj,
         cov_input=cov_input,
         cov_measurement=cov_measurement,
@@ -1185,7 +1183,7 @@ def _tune_steady_one_step_huber(
     metric_suffix = f"_{metric}"
 
     print(
-        f"\n  Step 3: Running grid search for SteadyOneStepHuberFilter... (Optimistic mode: {optimistic}, Metric: {metric.upper()})"
+        f"\n  Step 3: Running grid search for SteadyOneStepIterSatFilter... (Optimistic mode: {optimistic}, Metric: {metric.upper()})"
     )
     best_params, best_score, all_results = grid_search_filter_hyperparams(
         initial_filter,
@@ -1223,7 +1221,7 @@ def _tune_steady_one_step_huber(
 
     # Print the best results
     print(
-        f"\n--- SteadyOneStepHuberFilter Grid Search Results (Optimistic: {optimistic}, Metric: {metric.upper()}) ---"
+        f"\n--- SteadyOneStepIterSatFilter Grid Search Results (Optimistic: {optimistic}, Metric: {metric.upper()}) ---"
     )
     print(f"Best Hyperparameters ({metric.upper()}): {best_params}")
     print(f"Best Score: {best_score:.4f}")
@@ -1248,7 +1246,7 @@ def _tune_steady_one_step_huber(
     with open(results_filename, "wb") as f:
         pickle.dump(extended_results, f)
     print(
-        f"All SteadyOneStepHuberFilter grid search results saved to {results_filename}"
+        f"All SteadyOneStepIterSatFilter grid search results saved to {results_filename}"
     )
 
     # Also save the consolidated results
@@ -1269,12 +1267,12 @@ def _tune_steady_one_step_huber(
     with open(consolidated_filename, "wb") as f:
         pickle.dump(consolidated_results, f)
     print(
-        f"Consolidated SteadyOneStepHuberFilter results saved to {consolidated_filename}"
+        f"Consolidated SteadyOneStepIterSatFilter results saved to {consolidated_filename}"
     )
 
     # Generate a line plot of the coefficient vs. error metric
     print(
-        f"\n  Step 4: Generating line plot for SteadyOneStepHuberFilter coefficient vs. {metric.upper()}..."
+        f"\n  Step 4: Generating line plot for SteadyOneStepIterSatFilter coefficient vs. {metric.upper()}..."
     )
     plot_save_path = os.path.join(
         PARAMETER_SEARCH_PLOTS,
@@ -1300,9 +1298,9 @@ def _tune_steady_one_step_huber(
         save_path=plot_save_path,
         x_axis_label=r"$\lambda$ Coefficient",
         y_axis_label=f"{metric.upper()} Error",
-        title=f"SteadyOneStepHuberFilter {metric.upper()} vs. $\\lambda$ Coefficient",
+        title=f"SteadyOneStepIterSatFilter {metric.upper()} vs. $\\lambda$ Coefficient",
     )
-    print(f"SteadyOneStepHuberFilter line plot saved to {plot_save_path}")
+    print(f"SteadyOneStepIterSatFilter line plot saved to {plot_save_path}")
 
     return best_params, initial_filter, best_score
 
@@ -1362,8 +1360,10 @@ def _tune_steady_two_step_huber(
     sim_data_filename,
     sim_data_path,
 ):
-    """Tunes SteadyTwoStepHuberFilter with a two-dimensional grid search over coef_s and coef_o."""
-    print(f"\n  Step 2: Setting up SteadyTwoStepHuberFilter grid search parameters...")
+    """Tunes SteadyTwoStepIterSatFilter with a two-dimensional grid search over coef_s and coef_o."""
+    print(
+        f"\n  Step 2: Setting up SteadyTwoStepIterSatFilter grid search parameters..."
+    )
     param_grid = [
         {"coef_s": cs, "coef_o": co, "step_size": step_size}
         for cs in coef_s_sweep
@@ -1373,7 +1373,7 @@ def _tune_steady_two_step_huber(
     print(f"    Generated param_grid with {len(param_grid)} parameter combinations")
 
     # Create initial filter with default values
-    initial_filter = SteadyTwoStepHuberFilter(
+    initial_filter = SteadyTwoStepIterSatFilter(
         system_model=system_model_obj,
         cov_input=cov_input,
         cov_measurement=cov_measurement,
@@ -1385,7 +1385,7 @@ def _tune_steady_two_step_huber(
     metric_suffix = f"_{metric}"
 
     print(
-        f"\n  Step 3: Running grid search for SteadyTwoStepHuberFilter... (Optimistic mode: {optimistic}, Metric: {metric.upper()})"
+        f"\n  Step 3: Running grid search for SteadyTwoStepIterSatFilter... (Optimistic mode: {optimistic}, Metric: {metric.upper()})"
     )
     best_params, best_score, all_results = grid_search_filter_hyperparams(
         initial_filter,
@@ -1423,7 +1423,7 @@ def _tune_steady_two_step_huber(
 
     # Print the best results
     print(
-        f"\n--- SteadyTwoStepHuberFilter Grid Search Results (Optimistic: {optimistic}, Metric: {metric.upper()}) ---"
+        f"\n--- SteadyTwoStepIterSatFilter Grid Search Results (Optimistic: {optimistic}, Metric: {metric.upper()}) ---"
     )
     print(f"Best Hyperparameters ({metric.upper()}): {best_params}")
     if "coef_s" in best_params:
@@ -1453,12 +1453,12 @@ def _tune_steady_two_step_huber(
     with open(results_filename, "wb") as f:
         pickle.dump(extended_results, f)
     print(
-        f"All SteadyTwoStepHuberFilter grid search results saved to {results_filename}"
+        f"All SteadyTwoStepIterSatFilter grid search results saved to {results_filename}"
     )
 
     # Generate a contour plot of the coefficient combinations
     print(
-        f"\n  Step 4: Generating contour plot for SteadyTwoStepHuberFilter coefficients..."
+        f"\n  Step 4: Generating contour plot for SteadyTwoStepIterSatFilter coefficients..."
     )
     plot_save_path = os.path.join(
         PARAMETER_SEARCH_PLOTS,
@@ -1478,7 +1478,7 @@ def _tune_steady_two_step_huber(
         save_path=plot_save_path,
         **plot_args,
     )
-    print(f"SteadyTwoStepHuberFilter contour plot saved to {plot_save_path}")
+    print(f"SteadyTwoStepIterSatFilter contour plot saved to {plot_save_path}")
 
     return best_params, initial_filter, best_score
 
@@ -1501,9 +1501,9 @@ def _tune_steady_three_term_huber(
     sim_data_filename,
     sim_data_path,
 ):
-    """Tunes SteadyThreeTermHuberFilter with a two-dimensional grid search over coef_s, coef_o."""
+    """Tunes SteadyThreeStepIterSatFilter with a two-dimensional grid search over coef_s, coef_o."""
     print(
-        f"\n  Step 2: Setting up SteadyThreeTermHuberFilter grid search parameters..."
+        f"\n  Step 2: Setting up SteadyThreeStepIterSatFilter grid search parameters..."
     )
 
     # Create parameter grid for coef_s and coef_o as in the other Huber filters
@@ -1513,7 +1513,7 @@ def _tune_steady_three_term_huber(
     print(f"    Generated param_grid with {len(param_grid)} parameter combinations")
 
     # Create initial filter with default values
-    initial_filter = SteadyThreeTermHuberFilter(
+    initial_filter = SteadyThreeStepIterSatFilter(
         system_model=system_model_obj,
         cov_input=cov_input,
         cov_measurement=cov_measurement,
@@ -1525,7 +1525,7 @@ def _tune_steady_three_term_huber(
     metric_suffix = f"_{metric}"
 
     print(
-        f"\n  Step 3: Running grid search for SteadyThreeTermHuberFilter... (Optimistic mode: {optimistic}, Metric: {metric.upper()})"
+        f"\n  Step 3: Running grid search for SteadyThreeStepIterSatFilter... (Optimistic mode: {optimistic}, Metric: {metric.upper()})"
     )
     best_params, best_score, all_results = grid_search_filter_hyperparams(
         initial_filter,
@@ -1541,7 +1541,7 @@ def _tune_steady_three_term_huber(
 
     # Print the best results
     print(
-        f"\n--- SteadyThreeTermHuberFilter Grid Search Results (Optimistic: {optimistic}, Metric: {metric.upper()}) ---"
+        f"\n--- SteadyThreeStepIterSatFilter Grid Search Results (Optimistic: {optimistic}, Metric: {metric.upper()}) ---"
     )
     print(f"Best Hyperparameters ({metric.upper()}): {best_params}")
     if "coef_s" in best_params:
@@ -1570,7 +1570,7 @@ def _tune_steady_three_term_huber(
     with open(results_filename, "wb") as f:
         pickle.dump(extended_results, f)
     print(
-        f"All SteadyThreeTermHuberFilter grid search results saved to {results_filename}"
+        f"All SteadyThreeStepIterSatFilter grid search results saved to {results_filename}"
     )
 
     # Also save the consolidated results
@@ -1591,12 +1591,12 @@ def _tune_steady_three_term_huber(
     with open(consolidated_filename, "wb") as f:
         pickle.dump(consolidated_results, f)
     print(
-        f"Consolidated SteadyThreeTermHuberFilter results saved to {consolidated_filename}"
+        f"Consolidated SteadyThreeStepIterSatFilter results saved to {consolidated_filename}"
     )
 
     # Generate a contour plot of the coefficient combinations
     print(
-        f"\n  Step 4: Generating contour plot for SteadyThreeTermHuberFilter coefficients..."
+        f"\n  Step 4: Generating contour plot for SteadyThreeStepIterSatFilter coefficients..."
     )
     plot_save_path = os.path.join(
         PARAMETER_SEARCH_PLOTS,
@@ -1616,7 +1616,7 @@ def _tune_steady_three_term_huber(
         save_path=plot_save_path,
         **plot_args,
     )
-    print(f"SteadyThreeTermHuberFilter contour plot saved to {plot_save_path}")
+    print(f"SteadyThreeStepIterSatFilter contour plot saved to {plot_save_path}")
 
     return best_params, initial_filter, best_score
 
@@ -1836,11 +1836,11 @@ def main():
     }
 
     tune_function_dispatch = {
-        "circular_huber": _tune_circular_huber,
+        "iskf": _tune_iskf,
         "huber": _tune_huber,
         "wolf": _tune_wolf,
         "steady_huber": _tune_steady_huber,
-        "steady_circular_huber": _tune_steady_circular_huber,
+        "steady_iskf": _tune_steady_iskf,
         "steady_regularized": _tune_steady_regularized,
         "steady_one_step_huber": _tune_steady_one_step_huber,
         "steady_two_step_huber": _tune_steady_two_step_huber,

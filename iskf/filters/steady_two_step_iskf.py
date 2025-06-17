@@ -6,17 +6,15 @@ linear discrete-time systems. In this steady-state version, the error covariance
 matrix P is pre-computed and does not change between update steps.
 """
 
-from typing import Optional, Union
+from typing import Union
 
 import numpy as np
 import control
-import scipy.linalg as la
 
-from .base_filter import BaseFilter
-from .util import chi_squared_quantile
+from .steady_iskf import SteadyIterSatKalmanFilter
 
 
-class SteadyOneStepHuberFilter(BaseFilter):
+class SteadyTwoStepIterSatFilter(SteadyIterSatKalmanFilter):
     """
     Steady-State Simple Huber Filter.
 
@@ -37,7 +35,8 @@ class SteadyOneStepHuberFilter(BaseFilter):
         system_model: control.StateSpace,
         cov_input: np.ndarray,
         cov_measurement: np.ndarray,
-        coef: Optional[Union[float, str]] = None,
+        coef_s: Union[float, str] = 1.0,
+        coef_o: Union[float, str] = 1.0,
         step_size: float = 1.0,
     ):
         """
@@ -56,12 +55,15 @@ class SteadyOneStepHuberFilter(BaseFilter):
             cov_measurement=cov_measurement,
         )
 
-        if coef is None:
-            self.coef = np.sqrt(chi_squared_quantile(0.7, self.ny))
-        elif coef == "inf":
-            self.coef = np.inf
+        if coef_s == "inf":
+            self.coef_s = np.inf
         else:
-            self.coef = coef
+            self.coef_s = coef_s
+
+        if coef_o == "inf":
+            self.coef_o = np.inf
+        else:
+            self.coef_o = coef_o
 
         self.step_size = step_size
 
@@ -87,10 +89,19 @@ class SteadyOneStepHuberFilter(BaseFilter):
 
     def update_step(self, y_k: np.ndarray, dt: float) -> None:
         """Update step."""
-        denom = np.linalg.norm(
-            self.cov_meas_inv_sqrt.dot(y_k - self.C.dot(self.x_pred))
+
+        def saturate(v, scale, coef):
+            denom = np.linalg.norm(scale.dot(v))
+            return (1.0 if denom < coef else coef / denom) * v
+
+        beta0 = saturate(
+            y_k - self.C.dot(self.x_pred), self.cov_meas_inv_sqrt, self.coef_o
         )
-        beta = 1.0 if denom < self.coef else self.coef / denom
-        self.x_hat = self.x_pred + self.step_size * beta * self.gain_matrix.dot(
-            y_k - self.C.dot(self.x_pred)
-        )
+        x1 = self.x_pred + self.step_size * self.gain_matrix.dot(beta0)
+
+        alpha1 = saturate(x1 - self.x_pred, self.cov_pred_inv_sqrt, self.coef_s)
+        grad_s = (np.eye(self.nx) - self.gain_matrix.dot(self.C)).dot(alpha1)
+
+        beta1 = saturate(y_k - self.C.dot(x1), self.cov_meas_inv_sqrt, self.coef_o)
+        x2 = x1 - self.step_size * (grad_s - self.gain_matrix.dot(beta1))
+        self.x_hat = x2

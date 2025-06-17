@@ -12,12 +12,12 @@ import numpy as np
 import control
 import scipy.linalg as la
 
-from .circular_huber_kalman_filter import CircularHuberKalmanFilter
+from .iskf import IterSatKalmanFilter
 
 
-class SteadyCircularHuberKalmanFilter(CircularHuberKalmanFilter):
+class SteadyIterSatKalmanFilter(IterSatKalmanFilter):
     """
-    Steady-State Circular Huber Kalman Filter.
+    Steady-State Iteratively Saturated Kalman Filter.
 
     This filter extends the regular Huber Kalman filter by pre-computing matrices
     during initialization and using a fixed error covariance that doesn't change
@@ -47,7 +47,7 @@ class SteadyCircularHuberKalmanFilter(CircularHuberKalmanFilter):
         """
         Initialize the Steady-State Huberized Kalman Filter.
 
-        Inherits parameters from CircularHuberKalmanFilter but pre-computes
+        Inherits parameters from IterSatKalmanFilter but pre-computes
         matrices during initialization.
         """
         # Initialize the parent class
@@ -94,8 +94,8 @@ class SteadyCircularHuberKalmanFilter(CircularHuberKalmanFilter):
             The updated state estimate x_hat.
         """
         if self.use_exact_mean_solve or np.isinf(self.num_iters):
-            self.x_hat = self._solve_circular_huber_exact(y_k, self.cov_pred_inv_sqrt)
+            self.x_hat = self._solve_iskf_exact(y_k, self.cov_pred_inv_sqrt)
         else:
-            self.x_hat = self._solve_circular_huber_scaled_gradient(
+            self.x_hat = self._solve_iskf_scaled_gradient(
                 y_k, self.cov_pred_inv_sqrt, self.gain_matrix
             )

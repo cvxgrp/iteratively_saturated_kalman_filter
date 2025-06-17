@@ -12,7 +12,7 @@ Usage:
     python plot_cstr_results.py --tune_filter_results <pickle_file_path>
 
 Example:
-    python plot_cstr_results.py --tune_filter_results results/parameter_search_data/steady_circular_huber_cstr_n4_p10_sp10_sm10_steps1000_seed0_optimistic_rmse_results.pkl
+    python plot_cstr_results.py --tune_filter_results results/parameter_search_data/steady_iskf_cstr_n4_p10_sp10_sm10_steps1000_seed0_optimistic_rmse_results.pkl
 """
 
 import os
@@ -37,16 +37,16 @@ from iskf.filters.kalman_filter import (
 )  # For completeness, though SKF is primary
 from iskf.filters.steady_kalman_filter import SteadyKalmanFilter
 from iskf.filters.huber_kalman_filter import HuberKalmanFilter
-from iskf.filters.circular_huber_kalman_filter import CircularHuberKalmanFilter
+from iskf.filters.iskf import IterSatKalmanFilter
 from iskf.filters.steady_huber_kalman_filter import SteadyHuberKalmanFilter
-from iskf.filters.steady_circular_huber_kalman_filter import (
-    SteadyCircularHuberKalmanFilter,
+from iskf.filters.steady_iskf import (
+    SteadyIterSatKalmanFilter,
 )
 from iskf.filters.steady_regularized_kalman_filter import SteadyRegularizedKalmanFilter
 from iskf.filters.weighted_likelihood_filter import WeightedLikelihoodFilter
-from iskf.filters.steady_one_step_huber_filter import SteadyOneStepHuberFilter
-from iskf.filters.steady_two_step_huber_filter import SteadyTwoStepHuberFilter
-from iskf.filters.steady_three_term_huber import SteadyThreeTermHuberFilter
+from iskf.filters.steady_one_step_iskf import SteadyOneStepIterSatFilter
+from iskf.filters.steady_two_step_iskf import SteadyTwoStepIterSatFilter
+from iskf.filters.steady_three_term_iskf import SteadyThreeStepIterSatFilter
 
 
 def setup_matplotlib_for_latex():
@@ -502,14 +502,14 @@ def run_cstr_filters_and_plot(
     # 2. Instantiate and run the tuned filter (operates on linearized data)
     filter_class_map = {
         "huber": HuberKalmanFilter,
-        "circular_huber": CircularHuberKalmanFilter,
+        "iskf": IterSatKalmanFilter,
         "steady_huber": SteadyHuberKalmanFilter,
-        "steady_circular_huber": SteadyCircularHuberKalmanFilter,
+        "steady_iskf": SteadyIterSatKalmanFilter,
         "steady_regularized": SteadyRegularizedKalmanFilter,
         "wolf": WeightedLikelihoodFilter,
-        "steady_one_step_huber": SteadyOneStepHuberFilter,
-        "steady_two_step_huber": SteadyTwoStepHuberFilter,
-        "steady_three_term_huber": SteadyThreeTermHuberFilter,
+        "steady_one_step_huber": SteadyOneStepIterSatFilter,
+        "steady_two_step_huber": SteadyTwoStepIterSatFilter,
+        "steady_three_term_huber": SteadyThreeStepIterSatFilter,
     }
     TunedFilterClass = filter_class_map.get(tuned_filter_type_name)
     if TunedFilterClass is None:
@@ -554,9 +554,9 @@ def run_cstr_filters_and_plot(
 
     filter_display_names = {
         "huber": "Huber KF",
-        "circular_huber": "Circular Huber KF",
+        "iskf": "ISKF",
         "steady_huber": "Steady Huber KF",
-        "steady_circular_huber": "Steady Circ. Huber KF",
+        "steady_iskf": "Steady ISKF",
         "steady_regularized": "Steady Reg. KF",
         "wolf": "WoLF",
         "steady_one_step_huber": "Steady 1-Step Huber",

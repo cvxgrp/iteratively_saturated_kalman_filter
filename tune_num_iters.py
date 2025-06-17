@@ -25,8 +25,8 @@ from iskf.grid_search import grid_search_filter_hyperparams
 from iskf.filters.util import chi_squared_quantile
 from iskf.metrics import METRIC_REGISTRY
 
-from iskf.filters.steady_circular_huber_kalman_filter import (
-    SteadyCircularHuberKalmanFilter,
+from iskf.filters.steady_iskf import (
+    SteadyIterSatKalmanFilter,
 )
 from iskf.filters.kalman_filter import KalmanFilter
 from iskf.filters.steady_kalman_filter import SteadyKalmanFilter
@@ -136,7 +136,7 @@ def _tune_hsskf_iter_count(
         "\n  Step 2: Setting up HSSKF grid search parameters with iteration count and step size sweep..."
     )
 
-    # Run SteadyCircularHuberKalmanFilter with use_exact_mean_solve=True
+    # Run SteadyIterSatKalmanFilter with use_exact_mean_solve=True
     # and grid search over coef_s, coef_o for baseline
     print(
         "\n  Running Exact HSSKF (use_exact_mean_solve=True) with coef_s/coef_o grid search for baseline comparison..."
@@ -154,7 +154,7 @@ def _tune_hsskf_iter_count(
         for co in coef_o_sweep
     ]
 
-    initial_filter_for_exact_run = SteadyCircularHuberKalmanFilter(
+    initial_filter_for_exact_run = SteadyIterSatKalmanFilter(
         system_model=system_model_obj,
         cov_input=process_noise_cov,
         cov_measurement=measurement_noise_cov,
@@ -241,7 +241,7 @@ def _tune_hsskf_iter_count(
             ]
 
             # Create initial filter with current iteration count and step size
-            initial_filter = SteadyCircularHuberKalmanFilter(
+            initial_filter = SteadyIterSatKalmanFilter(
                 system_model=system_model_obj,
                 cov_input=process_noise_cov,
                 cov_measurement=measurement_noise_cov,

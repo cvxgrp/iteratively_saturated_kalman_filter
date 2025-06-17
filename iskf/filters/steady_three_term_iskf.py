@@ -20,7 +20,7 @@ import cvxpy as cp
 from .base_filter import BaseFilter
 
 
-class SteadyThreeTermHuberFilter(BaseFilter):
+class SteadyThreeStepIterSatFilter(BaseFilter):
     """
     A steady-state Kalman filter with Huber regularization for robust state estimation.
 
@@ -47,7 +47,7 @@ class SteadyThreeTermHuberFilter(BaseFilter):
         num_iters: Union[int, float] = 2,
     ):
         """
-        Initialize the SteadyThreeTermHuberFilter.
+        Initialize the SteadyThreeStepIterSatFilter.
 
         This filter implements a steady-state Kalman filter with Huber regularization
         for robust state estimation. It uses Huber loss functions to handle outliers

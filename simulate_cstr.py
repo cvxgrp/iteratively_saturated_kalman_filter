@@ -26,21 +26,21 @@ from iskf.metrics import METRIC_REGISTRY
 # Import experimental filter implementations
 from iskf.filters.kalman_filter import KalmanFilter
 from iskf.filters.huber_kalman_filter import HuberKalmanFilter
-from iskf.filters.circular_huber_kalman_filter import (
-    CircularHuberKalmanFilter,
+from iskf.filters.iskf import (
+    IterSatKalmanFilter,
 )
 from iskf.filters.steady_kalman_filter import SteadyKalmanFilter
 from iskf.filters.steady_huber_kalman_filter import SteadyHuberKalmanFilter
-from iskf.filters.steady_circular_huber_kalman_filter import (
-    SteadyCircularHuberKalmanFilter,
+from iskf.filters.steady_iskf import (
+    SteadyIterSatKalmanFilter,
 )
 from iskf.filters.steady_regularized_kalman_filter import (
     SteadyRegularizedKalmanFilter,
 )
 from iskf.filters.weighted_likelihood_filter import WeightedLikelihoodFilter
-from iskf.filters.steady_one_step_huber_filter import SteadyOneStepHuberFilter
-from iskf.filters.steady_two_step_huber_filter import SteadyTwoStepHuberFilter
-from iskf.filters.steady_three_term_huber import SteadyThreeTermHuberFilter
+from iskf.filters.steady_one_step_iskf import SteadyOneStepIterSatFilter
+from iskf.filters.steady_two_step_iskf import SteadyTwoStepIterSatFilter
+from iskf.filters.steady_three_term_iskf import SteadyThreeStepIterSatFilter
 
 
 def plot_cstr_simulation_data(
@@ -389,9 +389,9 @@ def run_cstr_simulation_and_save(
         filter_instance = HuberKalmanFilter(
             **common_filter_args, **parsed_filter_kwargs
         )
-    elif filter_type == "circular_huber":
-        filter_display_name = "Circular Huber Kalman Filter"
-        filter_instance = CircularHuberKalmanFilter(
+    elif filter_type == "iskf":
+        filter_display_name = "Iteratively Saturated Kalman Filter"
+        filter_instance = IterSatKalmanFilter(
             **common_filter_args, **parsed_filter_kwargs
         )
     elif filter_type == "steady_kalman":
@@ -404,9 +404,9 @@ def run_cstr_simulation_and_save(
         filter_instance = SteadyHuberKalmanFilter(
             **common_filter_args, **parsed_filter_kwargs
         )
-    elif filter_type == "steady_circular_huber":
-        filter_display_name = "Steady-State Circular Huber Kalman Filter"
-        filter_instance = SteadyCircularHuberKalmanFilter(
+    elif filter_type == "steady_iskf":
+        filter_display_name = "Steady-State Iteratively Saturated Kalman Filter"
+        filter_instance = SteadyIterSatKalmanFilter(
             **common_filter_args, **parsed_filter_kwargs
         )
     elif filter_type == "steady_regularized":
@@ -421,17 +421,17 @@ def run_cstr_simulation_and_save(
         )
     elif filter_type == "steady_one_step_huber":
         filter_display_name = "Steady One-Step Huber Filter"
-        filter_instance = SteadyOneStepHuberFilter(
+        filter_instance = SteadyOneStepIterSatFilter(
             **common_filter_args, **parsed_filter_kwargs
         )
     elif filter_type == "steady_two_step_huber":
         filter_display_name = "Steady Two-Step Huber Filter"
-        filter_instance = SteadyTwoStepHuberFilter(
+        filter_instance = SteadyTwoStepIterSatFilter(
             **common_filter_args, **parsed_filter_kwargs
         )
     elif filter_type == "steady_three_term_huber":
         filter_display_name = "Steady Three-Term Huber Filter"
-        filter_instance = SteadyThreeTermHuberFilter(
+        filter_instance = SteadyThreeStepIterSatFilter(
             **common_filter_args, **parsed_filter_kwargs
         )
     else:
@@ -443,7 +443,7 @@ def run_cstr_simulation_and_save(
         print(
             f"  coef_s={getattr(filter_instance, 'coef_s', 'N/A')}, coef_o={getattr(filter_instance, 'coef_o', 'N/A')}"
         )
-    if hasattr(filter_instance, "num_iters"):  # For Circular Huber
+    if hasattr(filter_instance, "num_iters"):  # For ISKF
         print(
             f"  num_iters={getattr(filter_instance, 'num_iters', 'N/A')}, "
             f"step_size={getattr(filter_instance, 'step_size', 'N/A')}"
@@ -581,10 +581,10 @@ if __name__ == "__main__":
         choices=[
             "kalman",
             "huber",
-            "circular_huber",
+            "iskf",
             "steady_kalman",
             "steady_huber",
-            "steady_circular_huber",
+            "steady_iskf",
             "steady_regularized",
             "wolf",
             "steady_one_step_huber",

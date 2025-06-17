@@ -41,16 +41,16 @@ from iskf.metrics import METRIC_REGISTRY
 from iskf.filters.kalman_filter import KalmanFilter
 from iskf.filters.steady_kalman_filter import SteadyKalmanFilter
 from iskf.filters.huber_kalman_filter import HuberKalmanFilter
-from iskf.filters.circular_huber_kalman_filter import CircularHuberKalmanFilter
+from iskf.filters.iskf import IterSatKalmanFilter
 from iskf.filters.steady_huber_kalman_filter import SteadyHuberKalmanFilter
-from iskf.filters.steady_circular_huber_kalman_filter import (
-    SteadyCircularHuberKalmanFilter,
+from iskf.filters.steady_iskf import (
+    SteadyIterSatKalmanFilter,
 )
 from iskf.filters.steady_regularized_kalman_filter import SteadyRegularizedKalmanFilter
 from iskf.filters.weighted_likelihood_filter import WeightedLikelihoodFilter
-from iskf.filters.steady_one_step_huber_filter import SteadyOneStepHuberFilter
-from iskf.filters.steady_two_step_huber_filter import SteadyTwoStepHuberFilter
-from iskf.filters.steady_three_term_huber import SteadyThreeTermHuberFilter
+from iskf.filters.steady_one_step_iskf import SteadyOneStepIterSatFilter
+from iskf.filters.steady_two_step_iskf import SteadyTwoStepIterSatFilter
+from iskf.filters.steady_three_term_iskf import SteadyThreeStepIterSatFilter
 
 
 def setup_matplotlib_for_latex():
@@ -172,9 +172,9 @@ def reconstruct_model_and_filters(
         filter_type = None
         for filter_name in [
             "huber",
-            "circular_huber",
+            "iskf",
             "steady_huber",
-            "steady_circular_huber",
+            "steady_iskf",
             "steady_regularized",
             "wolf",
             "steady_one_step_huber",
@@ -304,14 +304,12 @@ def run_filters_and_plot(
 
     if filter_type == "huber":
         tuned_filter = HuberKalmanFilter(**common_filter_args, **best_params)
-    elif filter_type == "circular_huber":
-        tuned_filter = CircularHuberKalmanFilter(**common_filter_args, **best_params)
+    elif filter_type == "iskf":
+        tuned_filter = IterSatKalmanFilter(**common_filter_args, **best_params)
     elif filter_type == "steady_huber":
         tuned_filter = SteadyHuberKalmanFilter(**common_filter_args, **best_params)
-    elif filter_type == "steady_circular_huber":
-        tuned_filter = SteadyCircularHuberKalmanFilter(
-            **common_filter_args, **best_params
-        )
+    elif filter_type == "steady_iskf":
+        tuned_filter = SteadyIterSatKalmanFilter(**common_filter_args, **best_params)
     elif filter_type == "steady_regularized":
         tuned_filter = SteadyRegularizedKalmanFilter(
             **common_filter_args, **best_params
@@ -319,11 +317,11 @@ def run_filters_and_plot(
     elif filter_type == "wolf":
         tuned_filter = WeightedLikelihoodFilter(**common_filter_args, **best_params)
     elif filter_type == "steady_one_step_huber":
-        tuned_filter = SteadyOneStepHuberFilter(**common_filter_args, **best_params)
+        tuned_filter = SteadyOneStepIterSatFilter(**common_filter_args, **best_params)
     elif filter_type == "steady_two_step_huber":
-        tuned_filter = SteadyTwoStepHuberFilter(**common_filter_args, **best_params)
+        tuned_filter = SteadyTwoStepIterSatFilter(**common_filter_args, **best_params)
     elif filter_type == "steady_three_term_huber":
-        tuned_filter = SteadyThreeTermHuberFilter(**common_filter_args, **best_params)
+        tuned_filter = SteadyThreeStepIterSatFilter(**common_filter_args, **best_params)
     else:
         raise ValueError(f"Unknown filter type: {filter_type}")
 
@@ -361,9 +359,9 @@ def run_filters_and_plot(
     # Get pretty names for the filters
     filter_display_names = {
         "huber": "Huber Kalman Filter",
-        "circular_huber": "Circular Huber Kalman Filter",
+        "iskf": "Iteratively Saturated Kalman Filter",
         "steady_huber": "Steady-State Huber KF",
-        "steady_circular_huber": "Steady-State Circular Huber KF",
+        "steady_iskf": "Steady-State ISKF",
         "steady_regularized": "Steady-State Regularized KF",
         "wolf": "Weighted Likelihood Filter",
         "steady_one_step_huber": "Steady One-Step Huber KF",
@@ -474,28 +472,28 @@ def run_filters_and_plot(
     # Also display the plot if running interactively
     plt.show()
 
-    # --- Add logic for SteadyTwoStepHuberFilter estimates and state trajectory plot ---
+    # --- Add logic for SteadyTwoStepIterSatFilter estimates and state trajectory plot ---
     s2sh_estimates = None
     if filter_type == "steady_two_step_huber":
         s2sh_estimates = tuned_filter_estimates
         print(
-            "Using estimates from the tuned SteadyTwoStepHuberFilter for state plots."
+            "Using estimates from the tuned SteadyTwoStepIterSatFilter for state plots."
         )
     else:
         print(
-            "Tuned filter is not SteadyTwoStepHuberFilter. "
-            "Running a new SteadyTwoStepHuberFilter with default params for state plots."
+            "Tuned filter is not SteadyTwoStepIterSatFilter. "
+            "Running a new SteadyTwoStepIterSatFilter with default params for state plots."
         )
         default_s2sh_params = {
             "coef_s": 1.345,  # Huber parameter for state
             "coef_o": 1.345,  # Huber parameter for observation
             "step_size": 1.0,  # Step size for the internal iterations
         }
-        s2sh_filter = SteadyTwoStepHuberFilter(
+        s2sh_filter = SteadyTwoStepIterSatFilter(
             **common_filter_args, **default_s2sh_params
         )
         print(
-            f"Running new SteadyTwoStepHuberFilter with params: {default_s2sh_params}"
+            f"Running new SteadyTwoStepIterSatFilter with params: {default_s2sh_params}"
         )
         s2sh_estimates = s2sh_filter.estimate(
             T_out, Y_measurements, x_initial_estimate=x0_estimate, P_initial=P0_initial

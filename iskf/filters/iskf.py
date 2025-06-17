@@ -15,9 +15,9 @@ from .base_filter import BaseFilter
 from .util import chi_squared_quantile
 
 
-class CircularHuberKalmanFilter(BaseFilter):
+class IterSatKalmanFilter(BaseFilter):
     """
-    Circular Huber Kalman Filter.
+    Iteratively Saturated Kalman Filter.
 
     This filter extends the standard Kalman filter by incorporating Huber's
     influence function to limit the impact of outliers during the state update step.
@@ -114,7 +114,7 @@ class CircularHuberKalmanFilter(BaseFilter):
         self.x_pred = self.A.dot(self.x_hat)
         self.cov_pred = self.A.dot(self.cov).dot(self.A.T) + self.cov_process_noise
 
-    def _solve_circular_huber_scaled_gradient(
+    def _solve_iskf_scaled_gradient(
         self, y_k: np.ndarray, cov_pred_inv_sqrt: np.ndarray, gain_matrix: np.ndarray
     ) -> np.ndarray:
         """Solve using scaled gradient method."""
@@ -137,7 +137,7 @@ class CircularHuberKalmanFilter(BaseFilter):
 
         return x
 
-    def _solve_circular_huber_exact(
+    def _solve_iskf_exact(
         self, y_k: np.ndarray, cov_pred_inv_sqrt: np.ndarray
     ) -> np.ndarray:
         """Update step using cvxpy."""
@@ -160,7 +160,7 @@ class CircularHuberKalmanFilter(BaseFilter):
         cp.Problem(cp.Minimize(obj)).solve()
         return x.value
 
-    def _circular_huber_cov_update(
+    def _iskf_cov_update(
         self,
         y_k: np.ndarray,
         cov_pred_inv: np.ndarray,
@@ -209,11 +209,11 @@ class CircularHuberKalmanFilter(BaseFilter):
             ) from e
 
         if self.use_exact_mean_solve or np.isinf(self.num_iters):
-            self.x_hat = self._solve_circular_huber_exact(y_k, cov_pred_inv_sqrt)
+            self.x_hat = self._solve_iskf_exact(y_k, cov_pred_inv_sqrt)
         else:
-            self.x_hat = self._solve_circular_huber_scaled_gradient(
+            self.x_hat = self._solve_iskf_scaled_gradient(
                 y_k, cov_pred_inv_sqrt, gain_matrix
             )
 
         # Update covariance
-        self._circular_huber_cov_update(y_k, cov_pred_inv, cov_pred_inv_sqrt)
+        self._iskf_cov_update(y_k, cov_pred_inv, cov_pred_inv_sqrt)
