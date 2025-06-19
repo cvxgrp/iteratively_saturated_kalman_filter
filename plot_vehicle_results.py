@@ -16,7 +16,7 @@ Usage:
 
 Example:
     python plot_vehicle_results.py --tune_filter_results results/parameter_search_data/steady_huber_vehicle_p10_sp10_sm10_steps1000_seed42_realistic_rmse_results.pkl
-    python plot_vehicle_results.py --sweep_iters_results results/parameter_search_data/hsskf_iter_count_vehicle_p10_sp10_sm10_steps1000_seed42_realistic_rmse_results.pkl
+    python plot_vehicle_results.py --sweep_iters_results results/parameter_search_data/steady_iskf_iter_count_vehicle_p10_sp10_sm10_steps1000_seed42_realistic_rmse_results.pkl
 """
 
 import os
@@ -177,9 +177,9 @@ def reconstruct_model_and_filters(
             "steady_iskf",
             "steady_regularized",
             "wolf",
-            "steady_one_step_huber",
-            "steady_two_step_huber",
-            "steady_three_term_huber",
+            "steady_one_step_iskf",
+            "steady_two_step_iskf",
+            "steady_three_term_iskf",
         ]:
             if filter_name in pickle_filename:
                 filter_type = filter_name
@@ -316,11 +316,11 @@ def run_filters_and_plot(
         )
     elif filter_type == "wolf":
         tuned_filter = WeightedLikelihoodFilter(**common_filter_args, **best_params)
-    elif filter_type == "steady_one_step_huber":
+    elif filter_type == "steady_one_step_iskf":
         tuned_filter = SteadyOneStepIterSatFilter(**common_filter_args, **best_params)
-    elif filter_type == "steady_two_step_huber":
+    elif filter_type == "steady_two_step_iskf":
         tuned_filter = SteadyTwoStepIterSatFilter(**common_filter_args, **best_params)
-    elif filter_type == "steady_three_term_huber":
+    elif filter_type == "steady_three_term_iskf":
         tuned_filter = SteadyThreeStepIterSatFilter(**common_filter_args, **best_params)
     else:
         raise ValueError(f"Unknown filter type: {filter_type}")
@@ -364,9 +364,9 @@ def run_filters_and_plot(
         "steady_iskf": "Steady-State ISKF",
         "steady_regularized": "Steady-State Regularized KF",
         "wolf": "Weighted Likelihood Filter",
-        "steady_one_step_huber": "Steady One-Step Huber KF",
-        "steady_two_step_huber": r"ISKF ($\tilde k=2$)",
-        "steady_three_term_huber": "Steady Three-Term Huber KF",
+        "steady_one_step_iskf": "Steady One-Step Huber KF",
+        "steady_two_step_iskf": r"ISKF ($\tilde k=2$)",
+        "steady_three_term_iskf": "Steady Three-Term Huber KF",
     }
 
     tuned_filter_name = filter_display_names.get(
@@ -474,7 +474,7 @@ def run_filters_and_plot(
 
     # --- Add logic for SteadyTwoStepIterSatFilter estimates and state trajectory plot ---
     s2sh_estimates = None
-    if filter_type == "steady_two_step_huber":
+    if filter_type == "steady_two_step_iskf":
         s2sh_estimates = tuned_filter_estimates
         print(
             "Using estimates from the tuned SteadyTwoStepIterSatFilter for state plots."
@@ -652,8 +652,8 @@ def plot_iteration_sweep_results(
     metric = model_info.get("metric", "rmse")
     optimistic = model_info.get("optimistic", False)
     iter_count_sweep = model_info.get("iter_count_sweep", [])
-    exact_hsskf_data = results_data.get("exact_hsskf", {})
-    baseline_score = exact_hsskf_data.get("score")
+    exact_steady_iskf_data = results_data.get("exact_steady_iskf", {})
+    baseline_score = exact_steady_iskf_data.get("score")
 
     # Get the SSKF and KF scores
     sskf_data = results_data.get("sskf", {})
@@ -758,14 +758,14 @@ def plot_iteration_sweep_results(
     #         label=f"KF {metric.upper()} ({kf_score:.4f})",
     #     )
 
-    # # Add horizontal line for the baseline score (Exact HSSKF)
+    # # Add horizontal line for the baseline score (Exact ISKF)
     # if baseline_score is not None:
     #     plt.axhline(
     #         y=baseline_score,
     #         color="red",
     #         linestyle="--",
     #         linewidth=2,
-    #         label=f"Exact HSSKF {metric.upper()} ({baseline_score:.4f})",
+    #         label=f"Exact ISKF {metric.upper()} ({baseline_score:.4f})",
     #     )
 
     # Set labels and title

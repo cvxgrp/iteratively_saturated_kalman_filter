@@ -2,7 +2,7 @@
 
 A Python implementation of the iteratively saturated Kalman filter (ISKF), for state
 estimation in the presence of outliers in both the measurements and dynamics.
-This code accompanies the paper: https://stanford.edu/~boyd/papers/is_kf.html
+This code accompanies the paper: https://stanford.edu/~boyd/papers/iskf.html
 
 The ISKF is about as efficient as the standard Kalman filter (KF), and the
 steady-state ISKF is about as efficient as the steady-state KF (just
@@ -114,7 +114,7 @@ Simulates a 2D vehicle model and saves simulation data for hyperparameter tuning
 python simulate_vehicle.py --random_seed 42 --outlier_percent 10 --num_simulation_steps 1000
 
 # Generate data and run a filter
-python simulate_vehicle.py --random_seed 42 --outlier_percent 10 --filter_type steady_two_step_huber
+python simulate_vehicle.py --random_seed 42 --outlier_percent 10 --filter_type steady_two_step_iskf
 ```
 
 **Key Arguments:**
@@ -145,28 +145,34 @@ python simulate_cstr.py --outlier_percent 10 --filter_type steady_iskf
 
 ### Filter Parameter Tuning (`tune_filter.py`)
 
-Performs grid search over filter hyperparameters using simulation data.
+Performs grid search over filter hyperparameters using simulation data. **It is recommended to use separate simulation files for fitting and testing to avoid overfitting.**
 
 ```bash
-# Tune ISKF (k̃=2) parameters
-python tune_filter.py --filter_type steady_two_step_huber \
+# Tune ISKF (k̃=2) parameters (with separate fit and test data)
+python tune_filter.py --filter_type steady_two_step_iskf \
     --sim_data_path results/simulation_data/vehicle_p10_sp10_sm10_steps1000_seed42.pkl \
+    --test_data_path results/simulation_data/vehicle_p10_sp10_sm10_steps1000_seed0.pkl \
     --metric rmse --optimistic
 
-# Tune Huber filter
+# Tune Huber filter (with separate fit and test data)
 python tune_filter.py --filter_type steady_huber \
-    --sim_data_path results/simulation_data/cstr_n3_p10_sp10_sm10_steps1000_seed0.pkl
+    --sim_data_path results/simulation_data/cstr_n3_p10_sp10_sm10_steps1000_seed0.pkl \
+    --test_data_path results/simulation_data/cstr_n3_p10_sp10_sm10_steps1000_seed1.pkl
 ```
 
 **Key Arguments:**
 
-- `--filter_type`: Filter to tune (`steady_two_step_huber`, `steady_huber`, `wolf`, etc.)
-- `--sim_data_path`: Path to simulation data (required)
+- `--filter_type`: Filter to tune (`steady_two_step_iskf`, `steady_huber`, `wolf`, etc.)
+- `--sim_data_path`: Path to simulation data for fitting (required)
+- `--test_data_path`: Path to separate test data for evaluation (recommended)
 - `--metric`: Evaluation metric (`rmse`, `mne`, `rmedse`, etc.)
 - `--optimistic`: Use true states for evaluation (vs. predicted measurements)
 - `--sweep_resolution`: Grid search resolution (default: 15)
 
 **Output:** Saves results to `results/parameter_search_data/{filter_type}_{data_info}_{metric}_results.pkl`
+
+> **Note:**
+> For robust evaluation, always use different random seeds for `--sim_data_path` and `--test_data_path` to ensure the filter is not tuned and tested on the same data.
 
 ### Iteration Count Tuning (`tune_num_iters.py`)
 
@@ -176,10 +182,10 @@ Specifically tunes the number of iterations for iterative filters.
 # Tune iteration count for ISKF
 python tune_num_iters.py \
     --sim_data_path results/simulation_data/vehicle_p10_sp10_sm10_steps1000_seed42.pkl \
-    --metric rmse --optimistic --sweep_resolution 10
+    --metric rmse --optimistic
 ```
 
-**Output:** Saves results to `results/parameter_search_data/hsskf_iter_count_{data_info}_{metric}_results.pkl`
+**Output:** Saves results to `results/parameter_search_data/steady_iskf_iter_count_{data_info}_{metric}_results.pkl`
 
 ## Visualization Tools
 
@@ -190,11 +196,11 @@ Visualizes filter performance on vehicle trajectory data.
 ```bash
 # Plot trajectory with tuned filter
 python plot_vehicle_results.py --tune_filter_results \
-    results/parameter_search_data/steady_two_step_huber_vehicle_p10_sp10_sm10_steps1000_seed42_realistic_rmse_results.pkl
+    results/parameter_search_data/steady_two_step_iskf_vehicle_p10_sp10_sm10_steps1000_seed42_realistic_rmse_results.pkl
 
 # Plot iteration sweep results
 python plot_vehicle_results.py --sweep_iters_results \
-    results/parameter_search_data/hsskf_iter_count_vehicle_p10_sp10_sm10_steps1000_seed42_realistic_rmse_results.pkl
+    results/parameter_search_data/steady_iskf_iter_count_vehicle_p10_sp10_sm10_steps1000_seed42_realistic_rmse_results.pkl
 ```
 
 **Features:**
@@ -232,20 +238,23 @@ from iskf.simulator import Simulator
 # 1. Create system model
 model = vehicle_ss(gamma=0.05, dt=0.05)
 
-# 2. Setup simulation
+# 2. Setup simulation with outlier parameters
 sim = Simulator(
     system_model=model,
     process_noise_cov=np.eye(2) * 10,
     measurement_noise_cov=np.eye(2) * 5,
     p_outlier_process=0.1,
-    p_outlier_measurement=0.1
+    outlier_scale_process=10.0,
+    p_outlier_measurement=0.1,
+    outlier_scale_measurement=10.0
 )
 
 # 3. Generate data
 T_out, Y_meas, X_true, _ = sim.simulate(
     x0=np.array([0, 0, 5, 5]),
-    T_final=50,
-    num_steps=1000
+    T_final=(1000 - 1) * 0.05,  # Ensure T_final is a multiple of dt
+    num_steps=1000,
+    return_noise_inputs=True
 )
 
 # 4. Create and run filter
@@ -298,7 +307,7 @@ python simulate_cstr.py --outlier_percent 10 --random_seed 0
 
 ```bash
 # Tune ISKF parameters
-python tune_filter.py --filter_type steady_two_step_huber \
+python tune_filter.py --filter_type steady_two_step_iskf \
     --sim_data_path results/simulation_data/vehicle_p10_sp10_sm10_steps1000_seed42.pkl
 
 # Tune iteration count
@@ -311,9 +320,9 @@ python tune_num_iters.py \
 ```bash
 # Plot tuned filter performance
 python plot_vehicle_results.py --tune_filter_results \
-    results/parameter_search_data/steady_two_step_huber_vehicle_p10_sp10_sm10_steps1000_seed42_realistic_rmse_results.pkl
+    results/parameter_search_data/steady_two_step_iskf_vehicle_p10_sp10_sm10_steps1000_seed42_realistic_rmse_results.pkl
 
 # Plot iteration analysis
 python plot_vehicle_results.py --sweep_iters_results \
-    results/parameter_search_data/hsskf_iter_count_vehicle_p10_sp10_sm10_steps1000_seed42_realistic_rmse_results.pkl
+    results/parameter_search_data/steady_iskf_iter_count_vehicle_p10_sp10_sm10_steps1000_seed42_realistic_rmse_results.pkl
 ```

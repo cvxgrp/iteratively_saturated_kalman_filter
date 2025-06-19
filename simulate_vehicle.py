@@ -412,17 +412,17 @@ def run_vehicle_simulation_and_save(
         filter_instance = WeightedLikelihoodFilter(
             **common_filter_args, **parsed_filter_kwargs
         )
-    elif filter_type == "steady_one_step_huber":
+    elif filter_type == "steady_one_step_iskf":
         filter_display_name = "Steady One-Step Huber Filter"
         filter_instance = SteadyOneStepIterSatFilter(
             **common_filter_args, **parsed_filter_kwargs
         )
-    elif filter_type == "steady_two_step_huber":
+    elif filter_type == "steady_two_step_iskf":
         filter_display_name = "Steady Two-Step Huber Filter"
         filter_instance = SteadyTwoStepIterSatFilter(
             **common_filter_args, **parsed_filter_kwargs
         )
-    elif filter_type == "steady_three_term_huber":
+    elif filter_type == "steady_three_term_iskf":
         filter_display_name = "Steady Three-Term Huber Filter"
         filter_instance = SteadyThreeStepIterSatFilter(
             **common_filter_args, **parsed_filter_kwargs
@@ -433,7 +433,7 @@ def run_vehicle_simulation_and_save(
             f"Unknown filter_type: {filter_type}. "
             "Choose from 'kalman', 'huber', 'iskf', "
             "'steady_kalman', 'steady_huber', 'steady_iskf', "
-            "'steady_regularized', 'wolf', 'steady_simple_huber', 'steady_two_step_huber', 'steady_three_term_huber'."
+            "'steady_regularized', 'wolf', 'steady_simple_huber', 'steady_two_step_iskf', 'steady_three_term_iskf'."
         )
 
     print(f"Initialized {filter_display_name}.")
@@ -476,8 +476,8 @@ def run_vehicle_simulation_and_save(
         )
 
     if hasattr(filter_instance, "step_size") and filter_type in [
-        "steady_one_step_huber",
-        "steady_two_step_huber",
+        "steady_one_step_iskf",
+        "steady_two_step_iskf",
     ]:
         print(f"  step_size={getattr(filter_instance, 'step_size', 'N/A')}")
     if (
@@ -642,9 +642,9 @@ if __name__ == "__main__":
             "steady_iskf",
             "steady_regularized",
             "wolf",
-            "steady_one_step_huber",
-            "steady_two_step_huber",
-            "steady_three_term_huber",
+            "steady_one_step_iskf",
+            "steady_two_step_iskf",
+            "steady_three_term_iskf",
         ],
         default=None,  # Default to None (no filter)
         help=(
@@ -653,7 +653,7 @@ if __name__ == "__main__":
             "If specified, the filter is also run and its performance is evaluated."
             " Choices: 'kalman', 'huber', 'iskf', 'steady_kalman', "
             "'steady_huber', 'steady_iskf', 'steady_regularized', 'wolf', "
-            "'steady_simple_huber', 'steady_two_step_huber', 'steady_three_term_huber'."
+            "'steady_simple_huber', 'steady_two_step_iskf', 'steady_three_term_iskf'."
         ),
     )
     args = parser.parse_args()

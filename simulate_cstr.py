@@ -419,17 +419,17 @@ def run_cstr_simulation_and_save(
         filter_instance = WeightedLikelihoodFilter(
             **common_filter_args, **parsed_filter_kwargs
         )
-    elif filter_type == "steady_one_step_huber":
+    elif filter_type == "steady_one_step_iskf":
         filter_display_name = "Steady One-Step Huber Filter"
         filter_instance = SteadyOneStepIterSatFilter(
             **common_filter_args, **parsed_filter_kwargs
         )
-    elif filter_type == "steady_two_step_huber":
+    elif filter_type == "steady_two_step_iskf":
         filter_display_name = "Steady Two-Step Huber Filter"
         filter_instance = SteadyTwoStepIterSatFilter(
             **common_filter_args, **parsed_filter_kwargs
         )
-    elif filter_type == "steady_three_term_huber":
+    elif filter_type == "steady_three_term_iskf":
         filter_display_name = "Steady Three-Term Huber Filter"
         filter_instance = SteadyThreeStepIterSatFilter(
             **common_filter_args, **parsed_filter_kwargs
@@ -587,9 +587,9 @@ if __name__ == "__main__":
             "steady_iskf",
             "steady_regularized",
             "wolf",
-            "steady_one_step_huber",
-            "steady_two_step_huber",
-            "steady_three_term_huber",
+            "steady_one_step_iskf",
+            "steady_two_step_iskf",
+            "steady_three_term_iskf",
             None,
         ],  # Allow None
         default=None,

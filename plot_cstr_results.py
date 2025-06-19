@@ -507,9 +507,9 @@ def run_cstr_filters_and_plot(
         "steady_iskf": SteadyIterSatKalmanFilter,
         "steady_regularized": SteadyRegularizedKalmanFilter,
         "wolf": WeightedLikelihoodFilter,
-        "steady_one_step_huber": SteadyOneStepIterSatFilter,
-        "steady_two_step_huber": SteadyTwoStepIterSatFilter,
-        "steady_three_term_huber": SteadyThreeStepIterSatFilter,
+        "steady_one_step_iskf": SteadyOneStepIterSatFilter,
+        "steady_two_step_iskf": SteadyTwoStepIterSatFilter,
+        "steady_three_term_iskf": SteadyThreeStepIterSatFilter,
     }
     TunedFilterClass = filter_class_map.get(tuned_filter_type_name)
     if TunedFilterClass is None:
@@ -559,9 +559,9 @@ def run_cstr_filters_and_plot(
         "steady_iskf": "Steady ISKF",
         "steady_regularized": "Steady Reg. KF",
         "wolf": "WoLF",
-        "steady_one_step_huber": "Steady 1-Step Huber",
-        "steady_two_step_huber": "Steady 2-Step Huber",
-        "steady_three_term_huber": "Steady 3-Term Huber",
+        "steady_one_step_iskf": "Steady 1-Step Huber",
+        "steady_two_step_iskf": "Steady 2-Step Huber",
+        "steady_three_term_iskf": "Steady 3-Term Huber",
     }
     tuned_filter_name_pretty = filter_display_names.get(
         tuned_filter_type_name, tuned_filter_type_name.replace("_", " ").title()
@@ -663,7 +663,7 @@ def plot_cstr_iteration_sweep_results(
     sskf_score = sskf_data.get("score")
 
     # Optional: A more optimal baseline if available in the data
-    optimal_baseline_data = results_data.get("exact_hsskf", {})  # Example key
+    optimal_baseline_data = results_data.get("exact_steady_iskf", {})  # Example key
     optimal_baseline_score = optimal_baseline_data.get("score")
 
     all_best_scores_sweep = results_data.get("all_best_scores", {})
@@ -771,12 +771,14 @@ def plot_cstr_iteration_sweep_results(
         input_basename = os.path.basename(data_file_path)
         input_name_no_ext = os.path.splitext(input_basename)[0]
         # Try to clean up the name if it's from tune_num_iters.py output
-        # e.g., hsskf_iter_count_cstr_n4_p10_sp10_sm10_steps1000_seed0_realistic_rmse_results
+        # e.g., steady_iskf_iter_count_cstr_n4_p10_sp10_sm10_steps1000_seed0_realistic_rmse_results
         name_parts = (
             input_name_no_ext.split("_optimistic_")[0]
             .split("_realistic_")[0]
             .split("_results")[0]
-            .replace("hsskf_iter_count_", "")  # Generalize if other filters are swept
+            .replace(
+                "steady_iskf_iter_count_", ""
+            )  # Generalize if other filters are swept
         )
         output_filename = f"{name_parts}_iter_sweep_plot.pdf"
         final_output_path = os.path.join("figures", output_filename)

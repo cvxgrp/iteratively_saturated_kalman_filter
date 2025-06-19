@@ -45,12 +45,12 @@ STEP_SIZE_COUNT = 1
 
 ITER_COUNT_SWEEP = np.arange(1, 11)
 
-# Setup the coef_s and coef_o sweep ranges (needed for exact HSSKF baseline too)
-alpha_min_hsskf, alpha_max_hsskf = 1e-12, 1 - 1e-12
-coef_s_min = 1e-1  # np.sqrt(chi_squared_quantile(alpha_min_hsskf, nx))
-coef_s_max = 10  # np.sqrt(chi_squared_quantile(alpha_max_hsskf, nx))
-coef_o_min = 1e-1  # np.sqrt(chi_squared_quantile(alpha_min_hsskf, ny))
-coef_o_max = 10  # np.sqrt(chi_squared_quantile(alpha_max_hsskf, ny))
+# Setup the coef_s and coef_o sweep ranges (needed for exact ISKF baseline too)
+alpha_min_steady_iskf, alpha_max_steady_iskf = 1e-12, 1 - 1e-12
+coef_s_min = 1e-1  # np.sqrt(chi_squared_quantile(alpha_min_steady_iskf, nx))
+coef_s_max = 10  # np.sqrt(chi_squared_quantile(alpha_max_steady_iskf, nx))
+coef_o_min = 1e-1  # np.sqrt(chi_squared_quantile(alpha_min_steady_iskf, ny))
+coef_o_max = 10  # np.sqrt(chi_squared_quantile(alpha_max_steady_iskf, ny))
 
 coef_s_sweep = np.geomspace(coef_s_min, coef_s_max, SWEEP_RESOLUTION)
 coef_o_sweep = np.geomspace(coef_o_min, coef_o_max, SWEEP_RESOLUTION)
@@ -113,8 +113,8 @@ def compute_filter_score(
         return metric_func(predicted_measurements, y_measurements)
 
 
-# --- Function to tune HSSKF with iteration count sweep ---
-def _tune_hsskf_iter_count(
+# --- Function to tune ISKF with iteration count sweep ---
+def _tune_steady_iskf_iter_count(
     system_model_obj,
     process_noise_cov,
     measurement_noise_cov,
@@ -133,16 +133,16 @@ def _tune_hsskf_iter_count(
 ):
     """Tunes HuberizedSSKalmanFilter with a focus on iteration count and step size."""
     print(
-        "\n  Step 2: Setting up HSSKF grid search parameters with iteration count and step size sweep..."
+        "\n  Step 2: Setting up ISKF grid search parameters with iteration count and step size sweep..."
     )
 
     # Run SteadyIterSatKalmanFilter with use_exact_mean_solve=True
     # and grid search over coef_s, coef_o for baseline
     print(
-        "\n  Running Exact HSSKF (use_exact_mean_solve=True) with coef_s/coef_o grid search for baseline comparison..."
+        "\n  Running Exact ISKF (use_exact_mean_solve=True) with coef_s/coef_o grid search for baseline comparison..."
     )
 
-    exact_hsskf_param_grid = [
+    exact_steady_iskf_param_grid = [
         {
             "coef_s": cs,
             "coef_o": co,
@@ -158,12 +158,12 @@ def _tune_hsskf_iter_count(
         system_model=system_model_obj,
         cov_input=process_noise_cov,
         cov_measurement=measurement_noise_cov,
-        # Other params will be set by grid_search_filter_hyperparams from exact_hsskf_param_grid
+        # Other params will be set by grid_search_filter_hyperparams from exact_steady_iskf_param_grid
     )
 
-    best_exact_params, exact_hsskf_score, _ = grid_search_filter_hyperparams(
+    best_exact_params, exact_steady_iskf_score, _ = grid_search_filter_hyperparams(
         initial_filter_for_exact_run,
-        exact_hsskf_param_grid,  # Grid over coef_s, coef_o with use_exact_mean_solve=True
+        exact_steady_iskf_param_grid,  # Grid over coef_s, coef_o with use_exact_mean_solve=True
         T_out,
         Y_meas,
         X_states if optimistic else None,
@@ -173,10 +173,10 @@ def _tune_hsskf_iter_count(
         n_jobs=n_jobs,  # Can use multiple jobs for this baseline search too
     )
 
-    print(f"  Best parameters for Exact HSSKF (use_exact_mean_solve=True):")
+    print(f"  Best parameters for Exact ISKF (use_exact_mean_solve=True):")
     print(f"    coef_s: {best_exact_params['coef_s']:.4f}")
     print(f"    coef_o: {best_exact_params['coef_o']:.4f}")
-    print(f"  Exact HSSKF {metric.upper()} score: {exact_hsskf_score:.4f}")
+    print(f"  Exact ISKF {metric.upper()} score: {exact_steady_iskf_score:.4f}")
 
     # Define step sizes to sweep over
     step_size_sweep = np.geomspace(STEP_SIZE_MIN, STEP_SIZE_MAX, STEP_SIZE_COUNT)
@@ -187,7 +187,7 @@ def _tune_hsskf_iter_count(
     all_best_scores = {}  # For tracking best score across all combinations
 
     # Base filename components
-    base_filename = f"hsskf_iter_count_{sim_data_filename}"
+    base_filename = f"steady_iskf_iter_count_{sim_data_filename}"
     opt_suffix = "_optimistic" if optimistic else "_realistic"
     metric_suffix = f"_{metric}"
 
@@ -203,9 +203,9 @@ def _tune_hsskf_iter_count(
             "coef_s_sweep": coef_s_sweep.tolist(),
             "coef_o_sweep": coef_o_sweep.tolist(),
         },
-        "exact_hsskf": {
+        "exact_steady_iskf": {
             "best_params": best_exact_params,
-            "score": exact_hsskf_score,
+            "score": exact_steady_iskf_score,
         },
         "results_by_step_size": {},
     }
@@ -321,7 +321,7 @@ def _tune_hsskf_iter_count(
             PARAMETER_SEARCH_PLOTS,
             f"{base_filename}_combined_plot{opt_suffix}{metric_suffix}.pdf",
         ),
-        exact_hsskf_score,
+        exact_steady_iskf_score,
         best_global_params,
     )
 
@@ -334,7 +334,7 @@ def _tune_hsskf_iter_count(
             PARAMETER_SEARCH_PLOTS,
             f"{base_filename}_heatmap{opt_suffix}{metric_suffix}.pdf",
         ),
-        exact_hsskf_score,
+        exact_steady_iskf_score,
     )
 
     # Print the global best parameters
@@ -346,9 +346,13 @@ def _tune_hsskf_iter_count(
     print(f"  coef_o: {best_global_params['coef_o']:.4f}")
     print(f"  Best {metric.upper()} score: {best_global_score:.4f}")
 
-    if exact_hsskf_score is not None:
-        improvement = (exact_hsskf_score - best_global_score) / exact_hsskf_score * 100
-        print(f"  Improvement over Exact HSSKF: {improvement:.2f}%")
+    if exact_steady_iskf_score is not None:
+        improvement = (
+            (exact_steady_iskf_score - best_global_score)
+            / exact_steady_iskf_score
+            * 100
+        )
+        print(f"  Improvement over Exact ISKF: {improvement:.2f}%")
     print("================================================\n")
 
     # Evaluate baseline filters for comparison
@@ -395,9 +399,9 @@ def _tune_hsskf_iter_count(
             "step_size_sweep": step_size_sweep.tolist(),
             "iter_count_sweep": ITER_COUNT_SWEEP.tolist(),
         },
-        "exact_hsskf": {
+        "exact_steady_iskf": {
             "best_params": best_exact_params,
-            "score": exact_hsskf_score,
+            "score": exact_steady_iskf_score,
         },
         "sskf": {
             "score": sskf_score,
@@ -412,7 +416,9 @@ def _tune_hsskf_iter_count(
     # Save the results dictionary
     if sweep_res:
         result_filename = os.path.basename(sim_data_filename).split(".")[0]
-        result_filename = f"hsskf_iter_count_{result_filename}_{metric}_results.pkl"
+        result_filename = (
+            f"steady_iskf_iter_count_{result_filename}_{metric}_results.pkl"
+        )
         result_filepath = os.path.join(
             "results", "parameter_search_data", result_filename
         )
@@ -429,7 +435,7 @@ def _tune_hsskf_iter_count(
     print(f"  SSKF {metric} score: {sskf_score:.6f}")
     print(f"  KF {metric} score: {kf_score:.6f}")
 
-    return all_step_size_results, exact_hsskf_score
+    return all_step_size_results, exact_steady_iskf_score
 
 
 def _plot_combined_step_size_results(
@@ -492,14 +498,14 @@ def _plot_combined_step_size_results(
             label=f"Step size = {step_size:.4e}",
         )
 
-    # Add horizontal line for the baseline score (Exact HSSKF)
+    # Add horizontal line for the baseline score (Exact ISKF)
     if baseline_score is not None:
         plt.axhline(
             y=baseline_score,
             color="red",
             linestyle="--",
             linewidth=2,
-            label=f"Exact HSSKF RMSE ({baseline_score:.4f})",
+            label=f"Exact ISKF RMSE ({baseline_score:.4f})",
         )
 
     # Highlight best point for each step size
@@ -523,7 +529,7 @@ def _plot_combined_step_size_results(
     # Set labels and title
     plt.xlabel("Number of Iterations", fontsize=12)
     plt.ylabel(f"{metric.upper()} Score", fontsize=12)
-    title = f"HSSKF Performance Across Different Step Sizes\n(Optimistic: {optimistic}, Metric: {metric.upper()})"
+    title = f"ISKF Performance Across Different Step Sizes\n(Optimistic: {optimistic}, Metric: {metric.upper()})"
     if best_overall_point:
         improvement = (
             (baseline_score - best_overall_point[1]) / baseline_score * 100
@@ -532,7 +538,7 @@ def _plot_combined_step_size_results(
         )
         title += f"\nBest: {best_overall_point[1]:.4f} @ iter={best_params['iter_count']}, step={best_params['step_size']:.4e}"
         if baseline_score:
-            title += f" ({improvement:.1f}% improvement over Exact HSSKF)"
+            title += f" ({improvement:.1f}% improvement over Exact ISKF)"
     plt.title(title, fontsize=14)
 
     # Add legend with smaller font for readability
@@ -629,7 +635,7 @@ def _plot_heatmap_step_size_iter_count(
     plt.xlabel("Number of Iterations", fontsize=12)
     plt.ylabel("Step Size", fontsize=12)
     plt.title(
-        f"HSSKF Performance Heatmap: Step Size vs Iteration Count\n(Optimistic: {optimistic}, Metric: {metric.upper()})",
+        f"ISKF Performance Heatmap: Step Size vs Iteration Count\n(Optimistic: {optimistic}, Metric: {metric.upper()})",
         fontsize=14,
     )
 
@@ -638,7 +644,7 @@ def _plot_heatmap_step_size_iter_count(
         plt.figtext(
             0.5,
             0.01,
-            f"Exact HSSKF {metric.upper()} score: {baseline_score:.4f}",
+            f"Exact ISKF {metric.upper()} score: {baseline_score:.4f}",
             ha="center",
             fontsize=12,
             bbox={"facecolor": "white", "alpha": 0.8, "pad": 5},
@@ -705,7 +711,7 @@ def main():
     # Extract the base filename without extension
     sim_data_filename = pathlib.Path(args.sim_data_path).stem
 
-    print(f"Starting HSSKF iteration count and step size tuning...")
+    print(f"Starting ISKF iteration count and step size tuning...")
     print(
         f"Optimistic mode: {optimistic} (Using {'true states' if optimistic else 'predicted measurements'} for metrics)"
     )
@@ -796,8 +802,8 @@ def main():
         )
         return
 
-    # Run the HSSKF tuning with iteration count sweep
-    all_step_size_results, exact_hsskf_score_main = _tune_hsskf_iter_count(
+    # Run the ISKF tuning with iteration count sweep
+    all_step_size_results, exact_steady_iskf_score_main = _tune_steady_iskf_iter_count(
         system_model_obj,
         process_noise_cov,
         measurement_noise_cov,
@@ -815,12 +821,12 @@ def main():
         sim_data_filename,
     )
 
-    print(f"\nHSSKF iteration count and step size tuning finished.")
+    print(f"\nISKF iteration count and step size tuning finished.")
     print(f"Mode: {'Optimistic' if optimistic else 'Realistic'}")
     print(f"Metric: {metric.upper()}")
-    print(f"Exact HSSKF {metric.upper()} score: {exact_hsskf_score_main:.4f}")
+    print(f"Exact ISKF {metric.upper()} score: {exact_steady_iskf_score_main:.4f}")
 
-    # Extract initial best parameters for Exact HSSKF (used as a baseline)
+    # Extract initial best parameters for Exact ISKF (used as a baseline)
     best_exact_params = {
         "step_size": None,
         "iter_count": "exact",
@@ -856,9 +862,9 @@ def main():
     # Now create and save the final results file with all data including SSKF and KF results
     # We need to load the results we saved earlier that contain the SSKF and KF scores
 
-    # First, construct the filepath for the results file that was created in _tune_hsskf_iter_count
+    # First, construct the filepath for the results file that was created in _tune_steady_iskf_iter_count
     result_filename = os.path.basename(args.sim_data_path).split(".")[0]
-    result_filename = f"hsskf_iter_count_{result_filename}_{metric}_results.pkl"
+    result_filename = f"steady_iskf_iter_count_{result_filename}_{metric}_results.pkl"
     result_filepath = os.path.join("results", "parameter_search_data", result_filename)
 
     # Load the complete results file that includes SSKF and KF scores
@@ -882,9 +888,9 @@ def main():
                 "step_size_sweep": step_size_sweep.tolist(),
                 "iter_count_sweep": ITER_COUNT_SWEEP.tolist(),
             },
-            "exact_hsskf": {
+            "exact_steady_iskf": {
                 "best_params": best_exact_params,
-                "score": exact_hsskf_score_main,
+                "score": exact_steady_iskf_score_main,
             },
             "sskf": complete_detailed_results.get("sskf", {}),
             "kf": complete_detailed_results.get("kf", {}),
@@ -901,9 +907,9 @@ def main():
                 "step_size_sweep": step_size_sweep.tolist(),
                 "iter_count_sweep": ITER_COUNT_SWEEP.tolist(),
             },
-            "exact_hsskf": {
+            "exact_steady_iskf": {
                 "best_params": best_exact_params,
-                "score": exact_hsskf_score_main,
+                "score": exact_steady_iskf_score_main,
             },
             "all_best_scores": all_best_scores,
             "best_global_params": best_global_params,
@@ -915,7 +921,7 @@ def main():
     # Save the combined results
     opt_suffix = "_optimistic" if optimistic else "_realistic"
     metric_suffix = f"_{metric}"
-    base_filename = f"hsskf_iter_count_{sim_data_filename}"
+    base_filename = f"steady_iskf_iter_count_{sim_data_filename}"
 
     results_filename = os.path.join(
         PARAMETER_SEARCH_DIR,

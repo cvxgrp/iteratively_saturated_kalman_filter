@@ -91,9 +91,9 @@ SUPPORTED_FILTER_TYPES = [
     "steady_iskf",
     "steady_regularized",
     "wolf",
-    "steady_one_step_huber",
-    "steady_two_step_huber",
-    "steady_three_term_huber",
+    "steady_one_step_iskf",
+    "steady_two_step_iskf",
+    "steady_three_term_iskf",
 ]
 
 # --- Filter Tuning Helper Functions ---
@@ -118,7 +118,7 @@ def _tune_iskf(
     sim_data_path,
 ):
     """Tunes HuberizedSSKalmanFilter."""
-    print("\n  Step 2: Setting up HSSKF grid search parameters...")
+    print("\n  Step 2: Setting up ISKF grid search parameters...")
     param_grid = [
         {"coef_s": cs, "coef_o": co} for cs in coef_s_sweep for co in coef_o_sweep
     ]
@@ -1035,7 +1035,7 @@ def _tune_steady_regularized(
     return best_params, initial_filter, best_score
 
 
-def _plot_steady_one_step_huber_results_lines(
+def _plot_steady_one_step_iskf_results_lines(
     all_sweeps_data: dict,  # Expected: {series_name_1: {coef1: score1, ...}, series_name_2: {coefA: scoreA, ...}}
     metric_name: str,
     save_path: str = None,
@@ -1050,7 +1050,7 @@ def _plot_steady_one_step_huber_results_lines(
         y_axis_label = metric_name
 
     # The loop iterates over series (e.g., different step_sizes or other configurations if they were present)
-    # In the current _tune_steady_one_step_huber, there will be only one series named "SteadyOneStepHuber"
+    # In the current _tune_steady_one_step_iskf, there will be only one series named "SteadyOneStepHuber"
     for series_label, coef_score_map in all_sweeps_data.items():
         if not coef_score_map:
             print(f"Warning: No data for series '{series_label}', skipping.")
@@ -1127,7 +1127,7 @@ def _plot_steady_one_step_huber_results_lines(
         print(f"Line plot saved to {save_path}")
 
 
-def _tune_steady_one_step_huber(
+def _tune_steady_one_step_iskf(
     system_model_obj,
     cov_input,
     cov_measurement,
@@ -1178,7 +1178,7 @@ def _tune_steady_one_step_huber(
     )
 
     # File name base
-    base_filename = f"steady_one_step_huber_{sim_data_filename}"
+    base_filename = f"steady_one_step_iskf_{sim_data_filename}"
     opt_suffix = "_optimistic" if optimistic else "_realistic"
     metric_suffix = f"_{metric}"
 
@@ -1231,7 +1231,7 @@ def _tune_steady_one_step_huber(
         "grid_search_results": all_results,
         "best_params": best_params,
         "best_score": best_score,
-        "filter_type": "steady_one_step_huber",
+        "filter_type": "steady_one_step_iskf",
         "sim_data_path": sim_data_path,
         "metric": metric,
         "optimistic": optimistic,
@@ -1241,7 +1241,7 @@ def _tune_steady_one_step_huber(
     # Save the grid search results
     results_filename = os.path.join(
         PARAMETER_SEARCH_DIR,
-        f"steady_one_step_huber_{sim_data_filename}{opt_suffix}{metric_suffix}_grid_search_results.pkl",
+        f"steady_one_step_iskf_{sim_data_filename}{opt_suffix}{metric_suffix}_grid_search_results.pkl",
     )
     with open(results_filename, "wb") as f:
         pickle.dump(extended_results, f)
@@ -1252,10 +1252,10 @@ def _tune_steady_one_step_huber(
     # Also save the consolidated results
     consolidated_filename = os.path.join(
         PARAMETER_SEARCH_DIR,
-        f"steady_one_step_huber_{sim_data_filename}{opt_suffix}{metric_suffix}_results.pkl",
+        f"steady_one_step_iskf_{sim_data_filename}{opt_suffix}{metric_suffix}_results.pkl",
     )
     consolidated_results = {
-        "filter_type": "steady_one_step_huber",
+        "filter_type": "steady_one_step_iskf",
         "best_params": best_params,
         "best_score": best_score,
         "sim_data_path": os.path.abspath(sim_data_path),
@@ -1276,7 +1276,7 @@ def _tune_steady_one_step_huber(
     )
     plot_save_path = os.path.join(
         PARAMETER_SEARCH_PLOTS,
-        f"steady_one_step_huber_{sim_data_filename}{opt_suffix}{metric_suffix}_line_plot.pdf",
+        f"steady_one_step_iskf_{sim_data_filename}{opt_suffix}{metric_suffix}_line_plot.pdf",
     )
 
     # Process for plotting
@@ -1292,7 +1292,7 @@ def _tune_steady_one_step_huber(
     plot_data_structured = {"SteadyOneStepHuber": coef_to_error}
 
     # Create the line plot
-    _plot_steady_one_step_huber_results_lines(
+    _plot_steady_one_step_iskf_results_lines(
         all_sweeps_data=plot_data_structured,  # Pass the correctly structured data
         metric_name=metric.upper(),
         save_path=plot_save_path,
@@ -1305,7 +1305,7 @@ def _tune_steady_one_step_huber(
     return best_params, initial_filter, best_score
 
 
-def _plot_steady_two_step_huber_results_lines(
+def _plot_steady_two_step_iskf_results_lines(
     all_sweeps_data: dict,
     metric_name: str,
     save_path: str = None,
@@ -1342,7 +1342,7 @@ def _plot_steady_two_step_huber_results_lines(
         print(f"Line plot saved to {save_path}")
 
 
-def _tune_steady_two_step_huber(
+def _tune_steady_two_step_iskf(
     system_model_obj,
     cov_input,
     cov_measurement,
@@ -1380,7 +1380,7 @@ def _tune_steady_two_step_huber(
     )
 
     # File name base
-    base_filename = f"steady_two_step_huber_{sim_data_filename}"
+    base_filename = f"steady_two_step_iskf_{sim_data_filename}"
     opt_suffix = "_optimistic" if optimistic else "_realistic"
     metric_suffix = f"_{metric}"
 
@@ -1437,7 +1437,7 @@ def _tune_steady_two_step_huber(
         "grid_search_results": all_results,
         "best_params": best_params,
         "best_score": best_score,
-        "filter_type": "steady_two_step_huber",
+        "filter_type": "steady_two_step_iskf",
         "sim_data_path": os.path.abspath(sim_data_path),
         "metric": metric,
         "optimistic": optimistic,
@@ -1483,7 +1483,7 @@ def _tune_steady_two_step_huber(
     return best_params, initial_filter, best_score
 
 
-def _tune_steady_three_term_huber(
+def _tune_steady_three_term_iskf(
     system_model_obj,
     cov_input,
     cov_measurement,
@@ -1520,7 +1520,7 @@ def _tune_steady_three_term_huber(
     )
 
     # File name base
-    base_filename = f"steady_three_term_huber_{sim_data_filename}"
+    base_filename = f"steady_three_term_iskf_{sim_data_filename}"
     opt_suffix = "_optimistic" if optimistic else "_realistic"
     metric_suffix = f"_{metric}"
 
@@ -1555,7 +1555,7 @@ def _tune_steady_three_term_huber(
         "grid_search_results": all_results,
         "best_params": best_params,
         "best_score": best_score,
-        "filter_type": "steady_three_term_huber",
+        "filter_type": "steady_three_term_iskf",
         "sim_data_path": sim_data_path,
         "metric": metric,
         "optimistic": optimistic,
@@ -1565,7 +1565,7 @@ def _tune_steady_three_term_huber(
     # Save the grid search results
     results_filename = os.path.join(
         PARAMETER_SEARCH_DIR,
-        f"steady_three_term_huber_{sim_data_filename}{opt_suffix}{metric_suffix}_grid_search_results.pkl",
+        f"steady_three_term_iskf_{sim_data_filename}{opt_suffix}{metric_suffix}_grid_search_results.pkl",
     )
     with open(results_filename, "wb") as f:
         pickle.dump(extended_results, f)
@@ -1576,10 +1576,10 @@ def _tune_steady_three_term_huber(
     # Also save the consolidated results
     consolidated_filename = os.path.join(
         PARAMETER_SEARCH_DIR,
-        f"steady_three_term_huber_{sim_data_filename}{opt_suffix}{metric_suffix}_results.pkl",
+        f"steady_three_term_iskf_{sim_data_filename}{opt_suffix}{metric_suffix}_results.pkl",
     )
     consolidated_results = {
-        "filter_type": "steady_three_term_huber",
+        "filter_type": "steady_three_term_iskf",
         "best_params": best_params,
         "best_score": best_score,
         "sim_data_path": os.path.abspath(sim_data_path),
@@ -1600,7 +1600,7 @@ def _tune_steady_three_term_huber(
     )
     plot_save_path = os.path.join(
         PARAMETER_SEARCH_PLOTS,
-        f"steady_three_term_huber_{sim_data_filename}{opt_suffix}{metric_suffix}_contour_plot.pdf",
+        f"steady_three_term_iskf_{sim_data_filename}{opt_suffix}{metric_suffix}_contour_plot.pdf",
     )
     plot_args = {
         "x_param_name": "coef_s",
@@ -1842,9 +1842,9 @@ def main():
         "steady_huber": _tune_steady_huber,
         "steady_iskf": _tune_steady_iskf,
         "steady_regularized": _tune_steady_regularized,
-        "steady_one_step_huber": _tune_steady_one_step_huber,
-        "steady_two_step_huber": _tune_steady_two_step_huber,
-        "steady_three_term_huber": _tune_steady_three_term_huber,
+        "steady_one_step_iskf": _tune_steady_one_step_iskf,
+        "steady_two_step_iskf": _tune_steady_two_step_iskf,
+        "steady_three_term_iskf": _tune_steady_three_term_iskf,
     }
 
     if filter_type_to_tune not in tune_function_dispatch:
